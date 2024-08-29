@@ -1,0 +1,15 @@
+---
+- name: My First Playbook
+  hosts: remote_host
+  become: yes
+
+  tasks:
+  - name: Install zlib package
+    apt:
+      name: zlib
+      state: present
+
+  - name: Create /tmp/some_file
+    file:
+      path: /tmp/some_file
+      state: touch
