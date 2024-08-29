@@ -1,0 +1,77 @@
+name: Node.js CI 🚀
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code 💻
+        uses: actions/checkout@v4
+
+      - name: Install dependencies 📦
+        run: npm install
+
+      - name: Run tests 🧪
+        run: npm test
+
+      - name: Security audit 🔒
+        run: npm audit --audit-level=critical
+
+      - name: Snyk security scan 🔍
+        uses: snyk/actions@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Checkout code 💻
+        uses: actions/checkout@v4
+
+      - name: Create CodeQL config file 📝
+        run: |
+          mkdir -p .github/codeql
+          echo "language: javascript" >> $GITHUB_WORKSPACE/.github/codeql/codeql-config.yml   
+
+      - name: Initialize CodeQL 🔍
+        uses: github/codeql-action/init@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Codecov analysis 📊
+        uses: codecov/codecov-action@v1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test report 📄
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-report
+          path: target/surefire-reports
+
+      - name: Upload code coverage report 📊
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-coverage-report
+          path: target/site/jacoco
+
+      - name: Install Azure CLI 💻
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sh
+
+      - name: Authenticate with Azure 🔒
+        run: |
+          az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: Deploy to Azure 🚀
+        run: |
+          az webapp deployment create --resource-group $AZURE_RESOURCE_GROUP --name $AZURE_APP_SERVICE_NAME --src-path target/site
+        env:
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_APP_SERVICE_NAME: ${{ secrets.AZURE_APP_SERVICE_NAME }}
