@@ -4,9 +4,9 @@
 <p align="center">
     <h1 align="center">DEVOPS-CLOUD-CHALLENGES</h1>
 </p>
-<p align="center">
-    ![alt text](https://github.com/juanbig/devOps-cloud-challenges/blob/master/manual-report/.09876567890png.png)  
-</p>
+
+![alt text](https://github.com/juanbig/devOps-cloud-challenges/blob/master/manual-report/.09876567890png.png)  
+
 <p align="center">
 	<img src="https://img.shields.io/github/license/juanbig/devOps-cloud-challenges?style=flat&color=0080ff" alt="license">
 	<img src="https://img.shields.io/github/last-commit/juanbig/devOps-cloud-challenges?style=flat&logo=git&logoColor=white&color=0080ff" alt="last-commit">
