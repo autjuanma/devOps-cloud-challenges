@@ -5,7 +5,7 @@
     <h1 align="center">DEVOPS-CLOUD-CHALLENGES</h1>
 </p>
 <p align="center">
-    <em>HTTP error 401 for prompt `slogan`</em>
+    ![alt text](https://github.com/juanbig/devOps-cloud-challenges/blob/master/manual-report/.09876567890png.png)  
 </p>
 <p align="center">
 	<img src="https://img.shields.io/github/license/juanbig/devOps-cloud-challenges?style=flat&color=0080ff" alt="license">
