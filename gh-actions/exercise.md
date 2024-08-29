@@ -11,3 +11,8 @@
 6️⃣ It initializes **Terraform** using `terraform init` 💻.
 7️⃣ It applies the **Terraform** configuration using `terraform apply -auto-approve`, which automatically approves the changes 🚀.
 8️⃣ Finally, it outputs the **Terraform** state using `terraform output` 📊.
+
+
+
+# Solution notes 
+Note: You'll need to replace the placeholders (S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, JENKINS_SLAVE_URL, JENKINS_SLAVE_USERNAME, JENKINS_SLAVE_PASSWORD) with your actual values. 😊
