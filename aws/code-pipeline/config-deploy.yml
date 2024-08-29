@@ -1,0 +1,59 @@
+Resources:
+  CodePipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties:
+      Name: !Sub 'my-pipeline'
+      RoleArn: !GetAtt 'CodePipelineServiceRole.Arn'
+      ArtifactStore:
+        Type: 'S3'
+        Location: !Sub 's3://${AWS::AccountId}-my-bucket'
+      Stages:
+        -
+          Name: 'Source'
+          Actions:
+            -
+              Name: 'CodeCommitAction'
+              ActionTypeId:
+                Category: 'Source'
+                Owner: 'AWS'
+                Provider: 'CodeCommit'
+                Version: '1'
+              Configuration:
+                RepositoryName: !Sub 'my-repo'
+                BranchName: !Sub 'main'
+              OutputArtifacts:
+                -
+                  Name: 'SourceOutput'
+        -
+          Name: 'Build'
+          Actions:
+            -
+              Name: 'CodeBuildAction'
+              ActionTypeId:
+                Category: 'Build'
+                Owner: 'AWS'
+                Provider: 'CodeBuild'
+                Version: '1'
+              Configuration:
+                ProjectName: !Sub 'my-build-project'
+              InputArtifacts:
+                -
+                  Name: 'SourceOutput'
+              OutputArtifacts:
+                -
+                  Name: 'BuildOutput'
+        -
+          Name: 'Test'
+          Actions:
+            -
+              Name: 'CodeBuildTestAction'
+              ActionTypeId:
+                Category: 'Test'
+                Owner: 'AWS'
+                Provider: 'CodeBuild'
+                Version: '1'
+              Configuration:
+                ProjectName: !Sub 'my-test-project'
+              InputArtifacts:
+                -
+                  Name: 'BuildOutput'
