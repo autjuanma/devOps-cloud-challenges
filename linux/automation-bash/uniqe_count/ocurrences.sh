@@ -1,4 +1,8 @@
 #!/bin/bash
+# Author information
+AUTHOR="[JuanTM 📲]"
+EMAIL="juannodecoorp@gmail.com"
+DATE="2024-30-24"
 
 # Count the occurrences of each IP address
 count_ips() {
