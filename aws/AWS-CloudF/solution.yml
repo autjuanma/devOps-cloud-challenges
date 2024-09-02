@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+
+  Subnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: '10.0.1.0/24'
+      VpcId: !Ref VPC
+
+  Subnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: '10.0.2.0/24'
+      VpcId: !Ref VPC
+
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: 'ami-0c94855ba95c71c99' # Amazon Linux 2 AMI
+      InstanceType: 't2.micro'
+      SubnetId: !Ref Subnet1
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+
+  SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: 'Allow inbound traffic on port 22 (SSH)'
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '192.168.1.100/32'
