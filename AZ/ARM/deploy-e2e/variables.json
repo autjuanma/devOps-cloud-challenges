@@ -1,0 +1,6 @@
+{
+    "appServicePlanName": "[concat(parameters('nodejsAppName'), '-asp')]",
+    "appServiceName": "[concat(parameters('nodejsAppName'), '-app')]",
+    "cosmosDbDatabaseId": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.DocumentDB/databaseAccounts/', parameters('cosmosDbAccountName'), '/databases/', parameters('databaseName'))]",
+    "cosmosDbContainerId": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.DocumentDB/databaseAccounts/', parameters('cosmosDbAccountName'), '/databases/', parameters('databaseName'), '/containers/', parameters('containerName'))]"
+  }

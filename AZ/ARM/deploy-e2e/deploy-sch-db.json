@@ -1,0 +1,120 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "nodejsAppName": {
+      "type": "string",
+      "defaultValue": "nodejs-app"
+    },
+    "cosmosDbAccountName": {
+      "type": "string",
+      "defaultValue": "cosmosdb-account"
+    },
+    "databaseName": {
+      "type": "string",
+      "defaultValue": "mydatabase"
+    },
+    "containerName": {
+      "type": "string",
+      "defaultValue": "mycontainer"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "East US"
+    }
+  },
+  "variables": "./variables.json",
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "name": "[resourceGroup().name]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-01-01"
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-01-01",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "name": "[variables('appServiceName')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-01-01",
+      "dependsOn": [
+        {
+          "resourceId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+          "apiVersion": "2020-01-01"
+        }
+      ],
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "14.17.0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "name": "[parameters('cosmosDbAccountName')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-04-01",
+      "properties": {
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "databaseAccountOfferType": "Standard"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/databases",
+      "name": "[parameters('databaseName')]",
+      "apiVersion": "2020-04-01",
+      "dependsOn": [
+        {
+          "resourceId": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName'))]",
+          "apiVersion": "2020-04-01"
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/databases/containers",
+      "name": "[parameters('containerName')]",
+      "apiVersion": "2020-04-01",
+      "dependsOn": [
+        {
+          "resourceId": "[resourceId('Microsoft.DocumentDB/databaseAccounts/databases', parameters('cosmosDbAccountName'), parameters('databaseName'))]",
+          "apiVersion": "2020-04-01"
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[concat(parameters('nodejsAppName'), '-nsg')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-01-01"
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[concat(parameters('nodejsAppName'), '-vnet')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-01-01"
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "name": "[concat(parameters('nodejsAppName'), '-appinsights')]",
+      "location": "[parameters('location')]",
+      "apiVersion": "2020-02-02"
+    }
+  ]
+}
