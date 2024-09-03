@@ -1,4 +1,3 @@
-**Strong ARM Template for Node.js Application Deployment**
 ============================================================
 
 **Challenge Description**

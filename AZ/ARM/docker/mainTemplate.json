@@ -1,0 +1,92 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "applicationName": {
+      "type": "string",
+      "defaultValue": "myMicroserviceApp"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "East US"
+    },
+    "postgreSQLAdminUsername": {
+      "type": "string",
+      "defaultValue": "myadmin"
+    },
+    "postgreSQLAdminPassword": {
+      "type": "securestring"
+    },
+    "dockerImage": {
+      "type": "string",
+      "defaultValue": "mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine"
+    }
+  },
+  "variables": {
+    "postgreSQLServerName": "[concat(parameters('applicationName'), 'postgres')]",
+    "containerGroupName": "[concat(parameters('applicationName'), 'containergroup')]",
+    "monitoringWorkspaceName": "[concat(parameters('applicationName'), 'workspace')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.DBforPostgreSQL/servers",
+      "apiVersion": "2017-12-01",
+      "name": "[variables('postgreSQLServerName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "B_Gen5_1"
+      },
+      "properties": {
+        "version": "11",
+        "administratorLogin": "[parameters('postgreSQLAdminUsername')]",
+        "administratorLoginPassword": "[parameters('postgreSQLAdminPassword')]"
+      }
+    },
+    {
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2019-12-01",
+      "name": "[variables('containerGroupName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "containers": [
+          {
+            "name": "[parameters('applicationName')]",
+            "properties": {
+              "image": "[parameters('dockerImage')]",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 1
+                }
+              },
+              "ports": [
+                {
+                  "protocol": "Tcp",
+                  "port": 80
+                }
+              ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "restartPolicy": "Always"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/workspaces",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('monitoringWorkspaceName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[concat(parameters('applicationName'), 'insights')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "ApplicationId": "[parameters('applicationName')]",
+        "WorkspaceId": "[variables('monitoringWorkspaceName')]"
+      }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+    "type": "Microsoft.DBforPostgreSQL/servers",
+    "apiVersion": "2017-12-01",
+    "name": "[variables('postgreSQLServerName')]",
+    "location": "[parameters('location')]",
+    "sku": {
+      "name": "B_Gen5_1"
+    },
+    "properties": {
+      "version": "11",
+      "administratorLogin": "[parameters('postgreSQLAdminUsername')]",
+      "administratorLoginPassword": "[parameters('postgreSQLAdminPassword')]"
+    }
+  }

@@ -1,0 +1,9 @@
+{
+    "springBootAppName": "springbot-microservices-app",
+    "mysqlServerName": "springbot-mysql-server",
+    "mysqlDatabaseName": "springbot-db",
+    "mysqlAdminUsername": "springbotadmin",
+    "mysqlAdminPassword": "your_password_here",
+    "containerName": "mycontainer",
+    "location": "East US"
+  }

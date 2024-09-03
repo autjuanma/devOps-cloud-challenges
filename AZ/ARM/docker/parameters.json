@@ -1,0 +1,21 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "applicationName": {
+        "value": "myMicroserviceApp"
+      },
+      "location": {
+        "value": "East US"
+      },
+      "postgreSQLAdminUsername": {
+        "value": "myadmin"
+      },
+      "postgreSQLAdminPassword": {
+        "value": "P@ssw0rd"
+      },
+      "dockerImage": {
+        "value": "mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine"
+      }
+    }
+  }

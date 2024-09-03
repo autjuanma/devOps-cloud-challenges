@@ -1,0 +1,194 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "springBootAppName": {
+        "type": "string",
+        "defaultValue": "springbot-microservices-app"
+      },
+      "mysqlServerName": {
+        "type": "string",
+        "defaultValue": "springbot-mysql-server"
+      },
+      "mysqlDatabaseName": {
+        "type": "string",
+        "defaultValue": "springbot-db"
+      },
+      "mysqlAdminUsername": {
+        "type": "string",
+        "defaultValue": "springbotadmin"
+      },
+      "mysqlAdminPassword": {
+        "type": "secureString"
+      },
+      "containerName": {
+        "type": "string",
+        "defaultValue": "mycontainer"
+      },
+      "location": {
+        "type": "string",
+        "defaultValue": "East US"
+      }
+    },
+    "variables": {
+      "springBootAppPort": 8080,
+      "mysqlServerPort": 3306
+    },
+    "resources": [
+      {
+        "type": "Microsoft.ContainerRegistry/registries",
+        "name": "[concat(parameters('springBootAppName'), '-registry')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "Basic"
+        },
+        "tags": {
+          "environment": "dev"
+        }
+      },
+      {
+        "type": "Microsoft.ContainerService/containerGroups",
+        "name": "[parameters('containerName')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "containers": [
+            {
+              "name": "[parameters('containerName')]",
+              "properties": {
+                "image": "[concat(parameters('springBootAppName'), ':latest')]",
+                "ports": [
+                  {
+                    "port": "[variables('springBootAppPort')]"
+                  }
+                ],
+                "environmentVariables": [
+                  {
+                    "name": "SPRING_DATASOURCE_URL",
+                    "value": "[concat('jdbc:mysql://', reference('mysqlServer').outputs.fullyQualifiedDomainName, ':', variables('mysqlServerPort'), '/', parameters('mysqlDatabaseName'))]"
+                  },
+                  {
+                    "name": "SPRING_DATASOURCE_USERNAME",
+                    "value": "[parameters('mysqlAdminUsername')]"
+                  },
+                  {
+                    "name": "SPRING_DATASOURCE_PASSWORD",
+                    "value": "[parameters('mysqlAdminPassword')]"
+                  }
+                ]
+              }
+            }
+          ],
+          "osType": "Linux",
+          "restartPolicy": "Always"
+        }
+      },
+      {
+        "type": "Microsoft.DBforMySQL/servers",
+        "name": "[parameters('mysqlServerName')]",
+        "location": "[parameters('location')]",
+        "sku": {
+          "name": "B_Gen5_2",
+          "tier": "Basic"
+        },
+        "properties": {
+          "administratorLogin": "[parameters('mysqlAdminUsername')]",
+          "administratorLoginPassword": "[parameters('mysqlAdminPassword')]",
+          "version": "8.0"
+        }
+      },
+      {
+        "type": "Microsoft.DBforMySQL/databases",
+        "name": "[parameters('mysqlDatabaseName')]",
+        "location": "[parameters('location')]",
+        "dependsOn": [
+          {
+            "resourceId": "/subscriptions/[subscription().subscriptionId]/resourceGroups/[resourceGroup().name]/providers/Microsoft.DBforMySQL/servers/[parameters('mysqlServerName')]",
+            "apiVersion": "2017-12-01"
+          }
+        ],
+        "properties": {
+          "charset": "utf8",
+          "collation": "utf8_general_ci"
+        }
+      },
+      {
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "name": "[concat(parameters('springBootAppName'), '-nsg')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "securityRules": [
+            {
+              "name": "allow-http",
+              "properties": {
+                "priority": 100,
+                "access": "Allow",
+                "direction": "Inbound",
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "[variables('springBootAppPort')]",
+                "sourceAddressPrefix": "*"
+              }
+            },
+            {
+              "name": "allow-mysql",
+              "properties": {
+                "priority": 101,
+                "access": "Allow",
+                "direction": "Inbound",
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "[variables('mysqlServerPort')]",
+                "sourceAddressPrefix": "*"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.Network/publicIPAddresses",
+        "name": "[concat(parameters('springBootAppName'), '-ip')]",
+        "location": "[parameters('location')]",
+        "properties": {
+          "publicIPAddressVersion": "IPv4",
+          "publicIPAllocationMethod": "Dynamic",
+          "dnsSettings": {
+            "domainNameLabel": "[concat(parameters('springBootAppName'), '-dns')]"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[concat(parameters('springBootAppName'), '-nic')]",
+        "location": "[parameters('location')]",
+        "dependsOn": [
+          {
+            "resourceId": "/subscriptions/[subscription().subscriptionId]/resourceGroups/[resourceGroup().name]/providers/Microsoft.Network/publicIPAddresses/[concat(parameters('springBootAppName'), '-ip')]",
+            "apiVersion": "2019-07-01"
+          },
+          {
+            "resourceId": "/subscriptions/[subscription().subscriptionId]/resourceGroups/[resourceGroup().name]/providers/Microsoft.Network/networkSecurityGroups/[concat(parameters('springBootAppName'), '-nsg')]",
+            "apiVersion": "2019-07-01"
+          }
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig1",
+              "properties": {
+                "privateIPAllocationMethod": "Dynamic",
+                "publicIPAddress": {
+                  "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('springBootAppName'), '-ip'))]"
+                },
+                "subnet": {
+                  "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', parameters('springBootAppName'), '-vnet/subnets/default')]"
+                },
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', concat(parameters('springBootAppName'), '-nsg'))]"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
