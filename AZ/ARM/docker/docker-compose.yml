@@ -1,0 +1,34 @@
+version: '3'
+services:
+  orders-service:
+    image: ${ORDERS_SERVICE_IMAGE}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgresql
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRESQL_ADMIN_USERNAME}:${POSTGRESQL_ADMIN_PASSWORD}@${POSTGRESQL_SERVER_NAME}:5432/${POSTGRESQL_DATABASE_NAME}
+  products-service:
+    image: ${PRODUCTS_SERVICE_IMAGE}
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgresql
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRESQL_ADMIN_USERNAME}:${POSTGRESQL_ADMIN_PASSWORD}@${POSTGRESQL_SERVER_NAME}:5432/${POSTGRESQL_DATABASE_NAME}
+  payment-service:
+    image: ${PAYMENT_SERVICE_IMAGE}
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgresql
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRESQL_ADMIN_USERNAME}:${POSTGRESQL_ADMIN_PASSWORD}@${POSTGRESQL_SERVER_NAME}:5432/${POSTGRESQL_DATABASE_NAME}
+  postgresql:
+    image: postgres:11
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRESQL_ADMIN_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRESQL_ADMIN_PASSWORD}
+      - POSTGRES_DB=${POSTGRESQL_DATABASE_NAME}

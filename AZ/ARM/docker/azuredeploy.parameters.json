@@ -1,0 +1,30 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "value": "West US"
+      },
+      "containerGroupName": {
+        "value": "mycontainergroup"
+      },
+      "ordersServiceImage": {
+        "value": "mcr.microsoft.com/oss/dotnet/core/sdk:3.1"
+      },
+      "productsServiceImage": {
+        "value": "node:14"
+      },
+      "paymentServiceImage": {
+        "value": "openjdk:8-jdk-alpine"
+      },
+      "postgreSQLAdminUsername": {
+        "value": "myadmin"
+      },
+      "postgreSQLAdminPassword": {
+        "value": "mypassword"
+      },
+      "serviceBusNamespaceName": {
+        "value": "myservicebusnamespace"
+      }
+    }
+  }

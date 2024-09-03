@@ -1,0 +1,190 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "location": {
+        "type": "string",
+        "defaultValue": "West US"
+      },
+      "containerGroupName": {
+        "type": "string",
+        "defaultValue": "mycontainergroup"
+      },
+      "ordersServiceImage": {
+        "type": "string",
+        "defaultValue": "mcr.microsoft.com/oss/dotnet/core/sdk:3.1"
+      },
+      "productsServiceImage": {
+        "type": "string",
+        "defaultValue": "node:14"
+      },
+      "paymentServiceImage": {
+        "type": "string",
+        "defaultValue": "openjdk:8-jdk-alpine"
+      },
+      "postgreSQLAdminUsername": {
+        "type": "string",
+        "defaultValue": "myadmin"
+      },
+      "postgreSQLAdminPassword": {
+        "type": "securestring",
+        "defaultValue": "mypassword"
+      },
+      "serviceBusNamespaceName": {
+        "type": "string",
+        "defaultValue": "myservicebusnamespace"
+      }
+    },
+    "variables": {
+      "containerGroupResourceId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('containerGroupName'))]",
+      "postgreSQLServerName": "[concat(parameters('containerGroupName'), '-postgresql')]",
+      "serviceBusNamespaceResourceId": "[resourceId('Microsoft.ServiceBus/namespaces', parameters('serviceBusNamespaceName'))]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.ContainerService/managedClusters",
+        "name": "[parameters('containerGroupName')]",
+        "properties": {
+          "kubernetesVersion": "1.21.2",
+          "dnsPrefix": "[parameters('containerGroupName')]",
+          "agentPoolProfiles": [
+            {
+              "name": "agentpool",
+              "count": 3,
+              "vmSize": "Standard_DS2_v2",
+              "osDiskSizeGB": 30,
+              "storageProfile": "ManagedDisks"
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.Compute/virtualNetworks",
+        "name": "[concat(parameters('containerGroupName'), '-vnet')]",
+        "properties": {
+          "addressSpace": {
+            "addressPrefixes": [
+              "10.0.0.0/16"
+            ]
+          },
+          "subnets": [
+            {
+              "name": "subnet1",
+              "properties": {
+                "addressPrefix": "10.0.1.0/24"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "name": "[concat(parameters('containerGroupName'), '-nsg')]",
+        "properties": {
+          "securityRules": [
+            {
+              "name": "rule1",
+              "properties": {
+                "protocol": "Tcp",
+                "sourcePortRange": "*",
+                "destinationPortRange": "80",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 100
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.ServiceBus/namespaces",
+        "name": "[parameters('serviceBusNamespaceName')]",
+        "properties": {
+          "sku": {
+            "name": "Standard",
+            "tier": "Standard"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.ServiceBus/namespaces/topics",
+        "name": "[concat(parameters('serviceBusNamespaceName'), '/orders')]",
+        "properties": {
+          "enablePartitioning": true
+        }
+      },
+      {
+        "type": "Microsoft.ServiceBus/namespaces/topics",
+        "name": "[concat(parameters('serviceBusNamespaceName'), '/products')]",
+        "properties": {
+          "enablePartitioning": true
+        }
+      },
+      {
+        "type": "Microsoft.ServiceBus/namespaces/topics",
+        "name": "[concat(parameters('serviceBusNamespaceName'), '/payments')]",
+        "properties": {
+          "enablePartitioning": true
+        }
+      },
+      {
+        "type": "Microsoft.DBforPostgreSQL/servers",
+        "name": "[variables('postgreSQLServerName')]",
+        "properties": {
+          "version": "11",
+          "sku": {
+            "name": "B_Gen5_1",
+            "tier": "Basic"
+          },
+          "storageProfile": {
+            "storageMB": 5120
+          },
+          "administratorLogin": "[parameters('postgreSQLAdminUsername')]",
+          "administratorLoginPassword": "[parameters('postgreSQLAdminPassword')]"
+        }
+      },
+      {
+        "type": "Microsoft.DBforPostgreSQL/servers/firewallRules",
+        "name": "[concat(variables('postgreSQLServerName'), '/allow-all')]",
+        "properties": {
+          "startIpAddress": "0.0.0.0",
+          "endIpAddress": "255.255.255.255"
+        }
+      },
+      {
+        "type": "Microsoft.ContainerRegistry/registries",
+        "name": "[concat(parameters('containerGroupName'), '-registry')]",
+        "properties": {
+          "adminUserEnabled": true,
+          "sku": {
+            "name": "Basic"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.ContainerRegistry/registries/webhooks",
+        "name": "[concat(parameters('containerGroupName'), '-registry/webhook')]",
+        "properties": {
+          "actions": [
+            "push"
+          ],
+          "scope": "[concat(parameters('containerGroupName'), '-registry')]"
+        }
+      }
+    ],
+    "outputs": {
+      "containerGroupResourceId": {
+        "type": "string",
+        "value": "[variables('containerGroupResourceId')]"
+      },
+      "postgreSQLServerName": {
+        "type": "string",
+        "value": "[variables('postgreSQLServerName')]"
+      },
+      "serviceBusNamespaceResourceId": {
+        "type": "string",
+        "value": "[variables('serviceBusNamespaceResourceId')]"
+      }
+    }
+  }
