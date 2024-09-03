@@ -1,0 +1,2 @@
+az deployment group create --resource-group <resource-group-name> --template-file <template-file-name>
+New-AzResourceGroupDeployment -ResourceGroupName <resource-group-name> -TemplateFile <template-file-name>

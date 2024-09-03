@@ -1,0 +1,64 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "cosmosDBAccountName": {
+        "type": "string",
+        "metadata": {
+          "description": "Cosmos DB account name"
+        }
+      },
+      "databaseName": {
+        "type": "string",
+        "metadata": {
+          "description": "Database name"
+        }
+      },
+      "containerName": {
+        "type": "string",
+        "metadata": {
+          "description": "Container name"
+        }
+      },
+      "location": {
+        "type": "string",
+        "metadata": {
+          "description": "Location for the Cosmos DB account"
+        }
+      }
+    },
+    "resources": [
+      {
+        "type": "Microsoft.DocumentDB/databaseAccounts",
+        "name": "[parameters('cosmosDBAccountName')]",
+        "location": "[parameters('location')]",
+        "apiVersion": "2021-04-15",
+        "properties": {
+          "consistencyPolicy": {
+            "defaultConsistencyLevel": "Session"
+          },
+          "databaseAccountOfferType": "Standard"
+        }
+      },
+      {
+        "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+        "name": "[concat(parameters('cosmosDBAccountName'), '/', parameters('databaseName'))]",
+        "apiVersion": "2021-04-15",
+        "properties": {
+          "resource": {
+            "id": "[concat('/databaseAccounts/', parameters('cosmosDBAccountName'), '/sqlDatabases/', parameters('databaseName'))]"
+          }
+        }
+      },
+      {
+        "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+        "name": "[concat(parameters('cosmosDBAccountName'), '/', parameters('databaseName'), '/', parameters('containerName'))]",
+        "apiVersion": "2021-04-15",
+        "properties": {
+          "resource": {
+            "id": "[concat('/databaseAccounts/', parameters('cosmosDBAccountName'), '/sqlDatabases/', parameters('databaseName'), '/containers/', parameters('containerName'))]"
+          }
+        }
+      }
+    ]
+  }
