@@ -1,0 +1,127 @@
+name: CI-Blue CWPP 
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Azure Active Directory (Azure AD) - Create Azure AD Application
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad app create --display-name ${{ secrets.AZURE_AD_APP_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Azure Active Directory (Azure AD) - Create Azure AD Service Principal
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad sp create-for-rbac --name ${{ secrets.AZURE_AD_APP_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Azure Active Directory (Azure AD) - Add Azure AD Service Principal to Azure AD Group
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad group member add --group ${{ secrets.AZURE_AD_GROUP_NAME }} --member-id ${{ secrets.AZURE_AD_SP_ID }}
+
+      - name: Azure Active Directory (Azure AD) - Enable Azure AD Conditional Access
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad conditional-access policy create --name ${{ secrets.AZURE_AD_CA_POLICY_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --enabled true
+
+      - name: Azure Active Directory (Azure AD) - Enable Azure AD Identity Protection
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad identity-protection policy create --name ${{ secrets.AZURE_AD_ID_PROTECTION_POLICY_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --enabled true
+
+      - name: Azure Active Directory (Azure AD) - Enable Azure AD Privileged Identity Management
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az ad privileged-identity-management policy create --name ${{ secrets.AZURE_AD_PIM_POLICY_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --enabled true
+
+      - name: Azure Security Center - Enable Azure Defender for Kubernetes
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az security pricing create --name KubernetesService --tier standard --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Login to AWS
+        uses: aws-actions/login@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Scan for misconfigurations in AWS
+        uses: aws-actions/security-audit@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to GCP
+        uses: google-github-actions/login@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Scan for misconfigurations in GCP
+        uses: google-github-actions/security-audit@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Cloud Security Posture Management (CSPM)
+        uses: cloud-security-posture-management/cspm@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
+          gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
+          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
+          azure-resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Cloud Workload Protection Platform (CWPP)
+        uses: cloud-workload-protection-platform/cwpp@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
+          gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
+          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
+                   azure-resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          cloud-provider: azure
+
+      - name: Upload results to GitHub
+        uses: actions/upload-artifact@v2
+        with:
+          name: results
+          path: results.json
+
+      - name: Send notification to Slack
+        uses: slackapi/slack-github-action@v1.2.0
+        with:
+          channel: ${{ secrets.SLACK_CHANNEL }}
+          token: ${{ secrets.SLACK_TOKEN }}
+          message: "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results: ${{ steps.cspm.outputs.results }}"
+
+      - name: Send notification to Email
+        uses: dawidd6/action-send-mail@v2
+        with:
+          server: ${{ secrets.EMAIL_SERVER }}
+          from: ${{ secrets.EMAIL_FROM }}
+          to: ${{ secrets.EMAIL_TO }}
+          subject: "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results"
+          body: "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results: ${{ steps.cspm.outputs.results }}"
