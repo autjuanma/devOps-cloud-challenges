@@ -1,0 +1,151 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "azureAppName": {
+        "type": "string"
+      },
+      "azureResourceGroup": {
+        "type": "string"
+      },
+      "azureCredentials": {
+        "type": "secureObject"
+      },
+      "snykToken": {
+        "type": "secureString"
+      },
+      "githubToken": {
+        "type": "secureString"
+      },
+      "codecovToken": {
+        "type": "secureString"
+      }
+    },
+    "variables": {
+      "ubuntuLatest": "ubuntu-latest"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Azure.Actions/CI",
+        "name": "CI-Blue",
+        "apiVersion": "2022-02-01",
+        "location": "[resourceGroup().location]",
+        "properties": {
+          "trigger": {
+            "type": "push",
+            "branches": [
+              "master"
+            ]
+          },
+          "jobs": [
+            {
+              "name": "ci",
+              "runsOn": "[variables('ubuntuLatest')]",
+              "steps": [
+                {
+                  "task": "actions/checkout@v4",
+                  "displayName": "Checkout code"
+                },
+                {
+                  "task": "run",
+                  "displayName": "Install dependencies",
+                  "script": "npm install"
+                },
+                {
+                  "task": "run",
+                  "displayName": "Run tests",
+                  "script": "npm test"
+                },
+                {
+                  "task": "run",
+                  "displayName": "Security audit",
+                  "script": "npm audit --audit-level=critical"
+                },
+                {
+                  "task": "snyk/actions@master",
+                  "displayName": "Snyk security scan",
+                  "inputs": {
+                    "snykToken": "[parameters('snykToken')]"
+                  }
+                },
+                {
+                  "task": "actions/checkout@v4",
+                  "displayName": "Checkout code"
+                },
+                {
+                  "task": "run",
+                  "displayName": "Create CodeQL config file",
+                  "script": "mkdir -p .github/codeql && echo \"language: javascript\" >> $GITHUB_WORKSPACE/.github/codeql/codeql-config.yml"
+                },
+                {
+                  "task": "github/codeql-action/init@v2",
+                  "displayName": "Initialize CodeQL",
+                  "inputs": {
+                    "githubToken": "[parameters('githubToken')]",
+                    "configFile": "./.github/codeql/codeql-config.yml"
+                  }
+                },
+                {
+                  "task": "codecov/codecov-action@v1",
+                  "displayName": "Codecov analysis",
+                  "inputs": {
+                    "codecovToken": "[parameters('codecovToken')]"
+                  }
+                },
+                {
+                  "task": "actions/upload-artifact@v2",
+                  "displayName": "Upload test report",
+                  "inputs": {
+                    "name": "test-report",
+                    "path": "target/surefire-reports"
+                  }
+                },
+                {
+                  "task": "actions/upload-artifact@v2",
+                  "displayName": "Upload code coverage report",
+                  "inputs": {
+                    "name": "code-coverage-report",
+                    "path": "target/site/jacoco"
+                  }
+                },
+                {
+                  "task": "azure/login@v1",
+                  "displayName": "Login to Azure",
+                  "inputs": {
+                    "creds": "[parameters('azureCredentials')]"
+                  }
+                },
+                {
+                  "task": "azure/microsoft-security-devops@v1",
+                  "displayName": "Scan for misconfigurations in Infrastructure as Code",
+                  "inputs": {
+                    "categories": "IaC"
+                  }
+                },
+                {
+                  "task": "azure/webapps-deploy@v2",
+                  "displayName": "Deploy to Azure",
+                  "inputs": {
+                    "app-name": "[parameters('azureAppName')]",
+                    "slot-name": "production",
+                    "resource-group": "[parameters('azureResourceGroup')]",
+                    "package": "."
+                  }
+                },
+                {
+                  "task": "azure/appservice-settings@v1",
+                  "displayName": "Azure Web App Configuration",
+                  "inputs": {
+                    "app-name": "[parameters('azureAppName')]",
+                    "slot-name": "production",
+                    "resource-group": "[parameters('azureResourceGroup')]",
+                    "general-settings-json": "{\"alwaysOn\": true, \"minTlsVersion\": \"1.2\"}"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
