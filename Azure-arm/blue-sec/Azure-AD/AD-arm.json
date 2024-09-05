@@ -1,0 +1,158 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "AZURE_CREDENTIALS": {
+        "type": "secureString"
+      },
+      "AZURE_AD_APP_NAME": {
+        "type": "string"
+      },
+      "AZURE_RESOURCE_GROUP": {
+        "type": "string"
+      },
+      "AZURE_AD_GROUP_NAME": {
+        "type": "string"
+      },
+      "AZURE_AD_SP_ID": {
+        "type": "string"
+      },
+      "AZURE_AD_CA_POLICY_NAME": {
+        "type": "string"
+      },
+      "AZURE_AD_ID_PROTECTION_POLICY_NAME": {
+        "type": "string"
+      },
+      "AZURE_AD_PIM_POLICY_NAME": {
+        "type": "string"
+      },
+      "AWS_ACCESS_KEY_ID": {
+        "type": "secureString"
+      },
+      "AWS_SECRET_ACCESS_KEY": {
+        "type": "secureString"
+      },
+      "AWS_REGION": {
+        "type": "string"
+      },
+      "GCP_CREDENTIALS": {
+        "type": "secureString"
+      },
+      "GCP_PROJECT_ID": {
+        "type": "string"
+      },
+      "SLACK_CHANNEL": {
+        "type": "string"
+      },
+      "SLACK_TOKEN": {
+        "type": "secureString"
+      },
+      "EMAIL_SERVER": {
+        "type": "string"
+      },
+      "EMAIL_FROM": {
+        "type": "string"
+      },
+      "EMAIL_TO": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "azureADApp": {
+        "name": "[parameters('AZURE_AD_APP_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "azureADSP": {
+        "name": "[parameters('AZURE_AD_APP_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "azureADGroup": {
+        "name": "[parameters('AZURE_AD_GROUP_NAME')]"
+      },
+      "azureADCAPolicy": {
+        "name": "[parameters('AZURE_AD_CA_POLICY_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "azureADIDProtectionPolicy": {
+        "name": "[parameters('AZURE_AD_ID_PROTECTION_POLICY_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "azureADPIMPolicy": {
+        "name": "[parameters('AZURE_AD_PIM_POLICY_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      }
+    },
+    "resources": [
+      {
+        "type": "Microsoft.AzureActiveDirectory/applications",
+        "name": "[variables('azureADApp').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "displayName": "[variables('azureADApp').name]"
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/servicePrincipals",
+        "name": "[variables('azureADSP').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "servicePrincipalNames": [
+            "[variables('azureADSP').name]"
+          ]
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/groups",
+        "name": "[variables('azureADGroup').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/conditionalAccess/policies",
+        "name": "[variables('azureADCAPolicy').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "displayName": "[variables('azureADCAPolicy').name]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/identityProtection/policies",
+        "name": "[variables('azureADIDProtectionPolicy').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "displayName": "[variables('azureADIDProtectionPolicy').name]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/privilegedIdentityManagement/policies",
+        "name": "[variables('azureADPIMPolicy').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "displayName": "[variables('azureADPIMPolicy').name]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.Security/pricings",
+        "name": "KubernetesService",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "pricingTier": "Standard"
+        }
+      }
+    ],
+    "outputs": {
+      "results": {
+        "type": "string",
+        "value": "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results"
+      }
+    }
+  }
