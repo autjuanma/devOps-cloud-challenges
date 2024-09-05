@@ -1,0 +1,260 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "githubToken": {
+            "type": "secureString"
+        },
+        "snykToken": {
+            "type": "secureString"
+        },
+        "codecovToken": {
+            "type": "secureString"
+        },
+        "azureCredentials": {
+            "type": "secureString"
+        },
+        "azureStorageAccountName": {
+            "type": "string"
+        },
+        "azureResourceGroup": {
+            "type": "string"
+        },
+        "azureSQLServerName": {
+            "type": "string"
+        },
+        "azureKeyVaultName": {
+            "type": "string"
+        },
+        "azureAppName": {
+            "type": "string"
+        },
+        "awsAccessKeyId": {
+            "type": "secureString"
+        },
+        "awsSecretAccessKey": {
+            "type": "secureString"
+        },
+        "awsRegion": {
+            "type": "string"
+        },
+        "awsAppName": {
+            "type": "string"
+        },
+        "gcpCredentials": {
+            "type": "secureString"
+        },
+        "gcpProjectId": {
+            "type": "string"
+        },
+        "gcpAppName": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "ubuntuLatest": "ubuntu-latest"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.AzureDevOps.Pipelines",
+            "name": "ci",
+            "apiVersion": "2018-02-01",
+            "properties": {
+                "pipeline": {
+                    "stages": [
+                        {
+                            "stage": "ci",
+                            "jobs": [
+                                {
+                                    "job": "ci",
+                                    "steps": [
+                                        {
+                                            "task": "actions/checkout@v4",
+                                            "displayName": "Checkout code"
+                                        },
+                                        {
+                                            "task": "npm install",
+                                            "displayName": "Install dependencies"
+                                        },
+                                        {
+                                            "task": "npm test",
+                                            "displayName": "Run tests"
+                                        },
+                                        {
+                                            "task": "npm audit --audit-level=critical",
+                                            "displayName": "Security audit"
+                                        },
+                                        {
+                                            "task": "snyk/actions@master",
+                                            "displayName": "Snyk security scan",
+                                            "inputs": {
+                                                "SNYK_TOKEN": "[parameters('snykToken')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "actions/checkout@v4",
+                                            "displayName": "Checkout code"
+                                        },
+                                        {
+                                            "task": "Create CodeQL config file",
+                                            "script": "mkdir -p .github/codeql\n echo \"language: javascript\" >> $GITHUB_WORKSPACE/.github/codeql/codeql-config.yml",
+                                            "displayName": "Create CodeQL config file"
+                                        },
+                                        {
+                                            "task": "github/codeql-action/init@v2",
+                                            "displayName": "Initialize CodeQL",
+                                            "inputs": {
+                                                "github-token": "[parameters('githubToken')]",
+                                                "config-file": "./.github/codeql/codeql-config.yml"
+                                            }
+                                        },
+                                        {
+                                            "task": "codecov/codecov-action@v1",
+                                            "displayName": "Codecov analysis",
+                                            "inputs": {
+                                                "CODECOV_TOKEN": "[parameters('codecovToken')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "actions/upload-artifact@v2",
+                                            "displayName": "Upload test report",
+                                            "inputs": {
+                                                "name": "test-report",
+                                                "path": "target/surefire-reports"
+                                            }
+                                        },
+                                        {
+                                            "task": "actions/upload-artifact@v2",
+                                            "displayName": "Upload code coverage report",
+                                            "inputs": {
+                                                "name": "code-coverage-report",
+                                                "path": "target/site/jacoco"
+                                            }
+                                        },
+                                        {
+                                            "task": "azure/login@v1",
+                                            "displayName": "Login to Azure",
+                                            "inputs": {
+                                                "creds": "[parameters('azureCredentials')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "azure/microsoft-security-devops@v1",
+                                            "displayName": "Scan for misconfigurations in Infrastructure as Code",
+                                            "inputs": {
+                                                "categories": "'IaC'"
+                                            }
+                                        },
+                                        {
+                                            "task": "azure/CLI@v1",
+                                            "displayName": "Prevent Azure Storage Account Public Access",
+                                            "script": "az storage account update --name [parameters('azureStorageAccountName')] --resource-group [parameters('azureResourceGroup')] --public-network-access Disabled"
+                                        },
+                                        {
+                                            "task": "azure/CLI@v1",
+                                            "displayName": "Enable Azure Storage Account Firewall",
+                                            "script": "az storage account update --name [parameters('azureStorageAccountName')] --resource-group [parameters('azureResourceGroup')] --default-action Deny"
+                                        },
+                                        {
+                                            "task": "azure/CLI@v1",
+                                            "displayName": "Enable Azure SQL Database Firewall",
+                                            "script": "az sql server firewall-rule create --resource-group [parameters('azureResourceGroup')] --server [parameters('azureSQLServerName')] --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0"
+                                        },
+                                        {
+                                            "task": "azure/CLI@v1",
+                                            "displayName": "Enable Azure Key Vault Firewall",
+                                            "script": "az keyvault update --name [parameters('azureKeyVaultName')] --resource-group [parameters('azureResourceGroup')] --default-action Deny"
+                                        },
+                                        {
+                                            "task": "azure/webapps-deploy@v2",
+                                            "displayName": "Deploy to Azure",
+                                            "inputs": {
+                                                "app-name": "[parameters('azureAppName')]",
+                                                "slot-name": "production",
+                                                "resource-group": "[parameters('azureResourceGroup')]",
+                                                "package": "."
+                                            }
+                                        },
+                                        {
+                                            "task": "azure/appservice-settings@v1",
+                                            "displayName": "Azure Web App Configuration",
+                                            "inputs": {
+                                                "app-name": "[parameters('azureAppName')]",
+                                                "slot-name": "production",
+                                                "resource-group": "[parameters('azureResourceGroup')]",
+                                                "general-settings-json": "{\"alwaysOn\": true, \"minTlsVersion\": \"1.2\"}"
+                                            }
+                                        },
+                                        {
+                                            "task": "aws-actions/login@v1",
+                                            "displayName": "Login to AWS",
+                                            "inputs": {
+                                                "aws-access-key-id": "[parameters('awsAccessKeyId')]",
+                                                "aws-secret-access-key": "[parameters('awsSecretAccessKey')]",
+                                                "aws-region": "[parameters('awsRegion')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "aws-actions/security-audit@v1",
+                                            "displayName": "Scan for misconfigurations in AWS",
+                                            "inputs": {
+                                                "aws-access-key-id": "[parameters('awsAccessKeyId')]",
+                                                "aws-secret-access-key": "[parameters('awsSecretAccessKey')]",
+                                                "aws-region": "[parameters('awsRegion')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "aws-actions/deploy@v1",
+                                            "displayName": "Deploy to AWS",
+                                            "inputs": {
+                                                "aws-access-key-id": "[parameters('awsAccessKeyId')]",
+                                                "aws-secret-access-key": "[parameters('awsSecretAccessKey')]",
+                                                "aws-region": "[parameters('awsRegion')]",
+                                                "package": "."
+                                            }
+                                        },
+                                        {
+                                            "task": "aws-actions/appservice-settings@v1",
+                                            "displayName": "AWS Web App Configuration",
+                                            "inputs": {
+                                                "aws-access-key-id": "[parameters('awsAccessKeyId')]",
+                                                "aws-secret-access-key": "[parameters('awsSecretAccessKey')]",
+                                                "aws-region": "[parameters('awsRegion')]",
+                                                "app-name": "[parameters('awsAppName')]",
+                                                "slot-name": "production",
+                                                "general-settings-json": "{\"alwaysOn\": true, \"minTlsVersion\": \"1.2\"}"
+                                            }
+                                        },
+                                        {
+                                            "task": "google-github-actions/login@v1",
+                                            "displayName": "Login to GCP",
+                                            "inputs": {
+                                                "credentials": "[parameters('gcpCredentials')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "google-github-actions/security-audit@v1",
+                                            "displayName": "Scan for misconfigurations in GCP",
+                                            "inputs": {
+                                                "credentials": "[parameters('gcpCredentials')]"
+                                            }
+                                        },
+                                        {
+                                            "task": "google-github-actions/deploy@v1",
+                                            "displayName": "Deploy to GCP",
+                                            "inputs": {
+                                                "credentials": "[parameters('gcpCredentials')]",
+                                                "project-id": "[parameters('gcpProjectId')]",
+                                                "package": "."
+                                            }
+                                        },
+                                        {
+                                            "task": "google-github-actions/appservice-settings@v1",
+                                            "displayName": "GCP Web App Configuration",
+                                            "inputs": {
+                                                "credentials": "[parameters('gcpCredentials')]",
+                                                "project-id": "[parameters('gcpProjectId')]",
+                                                "app-name": "[parameters('gcpAppName')]",
+                                                "slot-name": "production",
+                                                "general-settings-json": "{\"alwaysOn\": true, \"minTlsVersion\": \"1.2\"}"
+                                            }
