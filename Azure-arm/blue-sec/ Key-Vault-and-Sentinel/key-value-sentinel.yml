@@ -1,4 +1,4 @@
-name: Azure AD 
+name: Deploy  [Key Vault and Azure Sentinel] 
 
 on:
   push:
@@ -50,6 +50,30 @@ jobs:
           inlineScript: |
             az ad privileged-identity-management policy create --name ${{ secrets.AZURE_AD_PIM_POLICY_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --enabled true
 
+      - name: Azure Key Vault - Create Azure Key Vault
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az keyvault create --name ${{ secrets.AZURE_KEYVAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Azure Key Vault - Set Azure Key Vault access policy
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az keyvault set-policy --name ${{ secrets.AZURE_KEYVAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --object-id ${{ secrets.AZURE_AD_SP_ID }} --permissions-to-keys create get list update delete --permissions-to-secrets get list set delete
+
+      - name: Azure Sentinel - Create Azure Sentinel workspace
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az sentinel workspace create --name ${{ secrets.AZURE_SENTINEL_WORKSPACE_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Azure Sentinel - Enable Azure Sentinel data connectors
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az sentinel data-connector create --name ${{ secrets.AZURE_SENTINEL_DATA_CONNECTOR_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --workspace-name ${{ secrets.AZURE_SENTINEL_WORKSPACE_NAME }}
+
       - name: Azure Security Center - Enable Azure Defender for Kubernetes
         uses: azure/CLI@v1
         with:
@@ -73,34 +97,21 @@ jobs:
       - name: Login to GCP
         uses: google-github-actions/login@v1
         with:
-          credentials: ${{ secrets.GCP_CREDENTIALS }}
+         
+                   credentials: ${{ secrets.GCP_CREDENTIALS }}
+          cloud-provider: gcp
 
       - name: Scan for misconfigurations in GCP
         uses: google-github-actions/security-audit@v1
         with:
           credentials: ${{ secrets.GCP_CREDENTIALS }}
+          cloud-provider: gcp
 
-      - name: Cloud Security Posture Management (CSPM)
-        uses: cloud-security-posture-management/cspm@v1
+      - name: CSPM and CWPP scan
+        id: cspm
+        uses: blackboxai/cspm-cwpp-scan@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
-          gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
-          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure-resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
-
-      - name: Cloud Workload Protection Platform (CWPP)
-        uses: cloud-workload-protection-platform/cwpp@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
-          gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
-          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
-                   azure-resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
           azure-subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           cloud-provider: azure
 
@@ -125,3 +136,5 @@ jobs:
           to: ${{ secrets.EMAIL_TO }}
           subject: "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results"
           body: "Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results: ${{ steps.cspm.outputs.results }}"
+
+
