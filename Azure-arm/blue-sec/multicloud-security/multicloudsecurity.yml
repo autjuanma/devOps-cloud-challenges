@@ -1,0 +1,166 @@
+name: CI-Blue [Multicloud Sec] 🛡️ ⚔️ 🗡️💙💎
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Security audit
+        run: npm audit --audit-level=critical
+
+      - name: Snyk security scan
+        uses: snyk/actions@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create CodeQL config file
+        run: |
+          mkdir -p .github/codeql
+          echo "language: javascript" >> $GITHUB_WORKSPACE/.github/codeql/codeql-config.yml   
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Codecov analysis
+        uses: codecov/codecov-action@v1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-report
+          path: target/surefire-reports
+
+      - name: Upload code coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-coverage-report
+          path: target/site/jacoco
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Scan for misconfigurations in Infrastructure as Code
+        uses: azure/microsoft-security-devops@v1
+        with:
+          categories: 'IaC'
+
+      - name: Prevent Azure Storage Account Public Access
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az storage account update --name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --public-network-access Disabled
+
+      - name: Enable Azure Storage Account Firewall
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az storage account update --name ${{ secrets.AZURE_STORAGE_ACCOUNT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --default-action Deny
+
+      - name: Enable Azure SQL Database Firewall
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az sql server firewall-rule create --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --server ${{ secrets.AZURE_SQL_SERVER_NAME }} --name AllowAzureServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+
+      - name: Enable Azure Key Vault Firewall
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az keyvault update --name ${{ secrets.AZURE_KEY_VAULT_NAME }} --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} --default-action Deny
+
+      - name: Deploy to Azure
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          slot-name: 'production'
+          resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          package: .
+
+      - name: Azure Web App Configuration
+        uses: azure/appservice-settings@v1
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          slot-name: 'production'
+          resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          general-settings-json: '{"alwaysOn": true, "minTlsVersion": "1.2"}'
+
+      - name: Login to AWS
+        uses: aws-actions/login@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Scan for misconfigurations in AWS
+        uses: aws-actions/security-audit@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+           - name: Deploy to AWS
+        uses: aws-actions/deploy@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          package: .
+
+      - name: AWS Web App Configuration
+        uses: aws-actions/appservice-settings@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          app-name: ${{ secrets.AWS_APP_NAME }}
+          slot-name: 'production'
+          general-settings-json: '{"alwaysOn": true, "minTlsVersion": "1.2"}'
+
+      - name: Login to GCP
+        uses: google-github-actions/login@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Scan for misconfigurations in GCP
+        uses: google-github-actions/security-audit@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Deploy to GCP
+        uses: google-github-actions/deploy@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          project-id: ${{ secrets.GCP_PROJECT_ID }}
+          package: .
+
+      - name: GCP Web App Configuration
+        uses: google-github-actions/appservice-settings@v1
+        with:
+          credentials: ${{ secrets.GCP_CREDENTIALS }}
+          project-id: ${{ secrets.GCP_PROJECT_ID }}
+          app-name: ${{ secrets.GCP_APP_NAME }}
+          slot-name: 'production'
+          general-settings-json: '{"alwaysOn": true, "minTlsVersion": "1.2"}'
