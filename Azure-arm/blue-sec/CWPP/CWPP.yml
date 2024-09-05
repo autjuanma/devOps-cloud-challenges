@@ -1,4 +1,4 @@
-name: CI-Blue 🛡️ ⚔️ 🗡️💙💎
+name: CI-Blue 
 
 on:
   push:
@@ -121,7 +121,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-           - name: Deploy to AWS
+            - name: Deploy to AWS
         uses: aws-actions/deploy@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -167,6 +167,17 @@ jobs:
 
       - name: Cloud Security Posture Management (CSPM)
         uses: cloud-security-posture-management/cspm@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          gcp-credentials: ${{ secrets.GCP_CREDENTIALS }}
+          gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
+          azure-credentials: ${{ secrets.AZURE_CREDENTIALS }}
+          azure-resource-group: ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Cloud Workload Protection Platform (CWPP)
+        uses: cloud-workload-protection-platform/cwpp@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
