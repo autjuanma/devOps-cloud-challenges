@@ -1,0 +1,157 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "azureResourceGroup": {
+        "type": "string"
+      },
+      "azureSubscriptionId": {
+        "type": "string"
+      },
+      "azureAdAppName": {
+        "type": "string"
+      },
+      "azureAdAppId": {
+        "type": "string"
+      },
+      "azureAdSpId": {
+        "type": "string"
+      },
+      "azureAdGroupId": {
+        "type": "string"
+      },
+      "azureAdCaPolicyName": {
+        "type": "string"
+      },
+      "azureAdIdProtectionPolicyName": {
+        "type": "string"
+      },
+      "azureAdPimPolicyName": {
+        "type": "string"
+      },
+      "azureKeyVaultName": {
+        "type": "string"
+      },
+      "azureSentinelWorkspaceName": {
+        "type": "string"
+      },
+      "azureSentinelDataConnectorName": {
+        "type": "string"
+      }
+    },
+    "variables": {
+      "keyVaultResourceId": "[concat('/subscriptions/', parameters('azureSubscriptionId'), '/resourceGroups/', parameters('azureResourceGroup'), '/providers/Microsoft.KeyVault/vaults/', parameters('azureKeyVaultName'))]",
+      "sentinelWorkspaceResourceId": "[concat('/subscriptions/', parameters('azureSubscriptionId'), '/resourceGroups/', parameters('azureResourceGroup'), '/providers/Microsoft.OperationalInsights/workspaces/', parameters('azureSentinelWorkspaceName'))]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.AzureActiveDirectory/applications",
+        "name": "[parameters('azureAdAppName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "displayName": "[parameters('azureAdAppName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/servicePrincipals",
+        "name": "[parameters('azureAdSpId')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "servicePrincipalName": "[parameters('azureAdAppName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/groups",
+        "name": "[parameters('azureAdGroupId')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "displayName": "[parameters('azureAdGroupName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/conditionalAccessPolicies",
+        "name": "[parameters('azureAdCaPolicyName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "displayName": "[parameters('azureAdCaPolicyName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/identityProtectionPolicies",
+        "name": "[parameters('azureAdIdProtectionPolicyName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "displayName": "[parameters('azureAdIdProtectionPolicyName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.AzureActiveDirectory/privilegedIdentityManagementPolicies",
+        "name": "[parameters('azureAdPimPolicyName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "displayName": "[parameters('azureAdPimPolicyName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]",
+          "enabled": true
+        }
+      },
+      {
+        "type": "Microsoft.KeyVault/vaults",
+        "name": "[parameters('azureKeyVaultName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.KeyVault/vaults/accessPolicies",
+        "name": "[concat(parameters('azureKeyVaultName'), '/add')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "vaultName": "[parameters('azureKeyVaultName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]",
+          "objectId": "[parameters('azureAdSpId')]",
+          "permissionsToKeys": "create get list update delete",
+          "permissionsToSecrets": "get list set delete"
+        }
+      },
+      {
+        "type": "Microsoft.OperationalInsights/workspaces",
+        "name": "[parameters('azureSentinelWorkspaceName')]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.OperationalInsights/workspaces/dataConnectors",
+        "name": "[concat(parameters('azureSentinelWorkspaceName'), '/', parameters('azureSentinelDataConnectorName'))]",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "workspaceName": "[parameters('azureSentinelWorkspaceName')]",
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      },
+      {
+        "type": "Microsoft.Security/pricings",
+        "name": "KubernetesService",
+        "apiVersion": "2021-04-01",
+        "properties": {
+          "pricingTier": "standard",
+          "resourceGroup": "[parameters('azureResourceGroup')]"
+        }
+      }
+    ],
+    "outputs": {
+      "cspmResults": {
+        "type": "string",
+        "value": "[concat('Cloud Security Posture Management (CSPM) and Cloud Workload Protection Platform (CWPP) scan results: ', string(variables('cspmScanResults')))]"
+      }
+    }
+  }
