@@ -1,0 +1,108 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "AZURE_CREDENTIALS": {
+        "type": "secureString"
+      },
+      "AZURE_STORAGE_ACCOUNT_NAME": {
+        "type": "string"
+      },
+      "AZURE_RESOURCE_GROUP": {
+        "type": "string"
+      },
+      "AZURE_SQL_SERVER_NAME": {
+        "type": "string"
+      },
+      "AZURE_KEY_VAULT_NAME": {
+        "type": "string"
+      },
+      "AZURE_APP_NAME": {
+        "type": "string"
+      },
+      "SNYK_TOKEN": {
+        "type": "secureString"
+      },
+      "GITHUB_TOKEN": {
+        "type": "secureString"
+      },
+      "CODECOV_TOKEN": {
+        "type": "secureString"
+      }
+    },
+    "variables": {
+      "storageAccount": {
+        "name": "[parameters('AZURE_STORAGE_ACCOUNT_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "sqlServer": {
+        "name": "[parameters('AZURE_SQL_SERVER_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "keyVault": {
+        "name": "[parameters('AZURE_KEY_VAULT_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      },
+      "webApp": {
+        "name": "[parameters('AZURE_APP_NAME')]",
+        "resourceGroup": "[parameters('AZURE_RESOURCE_GROUP')]"
+      }
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Storage/storageAccounts",
+        "name": "[variables('storageAccount').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "publicNetworkAccess": "Disabled"
+        }
+      },
+      {
+        "type": "Microsoft.Storage/storageAccounts/firewallRules",
+        "name": "[variables('storageAccount').name]/default",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "defaultAction": "Deny"
+        }
+      },
+      {
+        "type": "Microsoft.Sql/servers/firewallRules",
+        "name": "[variables('sqlServer').name]/AllowAzureServices",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "startIpAddress": "0.0.0.0",
+          "endIpAddress": "0.0.0.0"
+        }
+      },
+      {
+        "type": "Microsoft.KeyVault/vaults",
+        "name": "[variables('keyVault').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "defaultAction": "Deny"
+        }
+      },
+      {
+        "type": "Microsoft.Web/sites",
+        "name": "[variables('webApp').name]",
+        "apiVersion": "2021-04-01",
+        "location": "[parameters('AZURE_RESOURCE_GROUP')]",
+        "properties": {
+          "siteConfig": {
+            "alwaysOn": true,
+            "minTlsVersion": "1.2"
+          }
+        }
+      }
+    ],
+    "outputs": {
+      "results": {
+        "type": "string",
+        "value": "Azure deployment and security configuration results"
+      }
+    }
+  }
