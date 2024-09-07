@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 10s
+scrape_configs:
+  - job_name: web
+    static_configs:
+      - targets: ['web:80']
+  - job_name: api
+    static_configs:
+      - targets: ['api:3000']
+  - job_name: db
+    static_configs:
+      - targets: ['db:5432']
+  - job_name: rabbitmq
+    static_configs:
+      - targets: ['rabbitmq:5672']
+  - job_name: worker
+    static_configs:
+      - targets: ['worker:8080']

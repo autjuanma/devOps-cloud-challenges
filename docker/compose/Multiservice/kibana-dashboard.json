@@ -1,0 +1,24 @@
+{
+    "dashboard": {
+      "id": "logs-dashboard",
+      "title": "Logs Dashboard"
+    },
+    "panels": [
+      {
+        "id": "logs-table",
+        "type": "table",
+        "title": "Logs",
+        "fields": [
+          "@timestamp",
+          "message",
+          "level"
+        ],
+        "sort": [
+          {
+            "field": "@timestamp",
+            "order": "desc"
+          }
+        ]
+      }
+    ]
+  }
